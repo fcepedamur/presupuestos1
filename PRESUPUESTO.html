@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Presupuestos Médicos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Montserrat:wght@300;400;500;600&family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Variables por defecto (se sobrescriben con JS) */
+    --azul-oscuro: #0b1f3a;
+    --azul-medio: #1a3a63;
+    --dorado: #c9a24a;
+    --dorado-claro: #e6c876;
+    --crema: #faf7f0;
+    --gris-texto: #3a3a3a;
+    --gris-suave: #8a8a8a;
+    --borde: #e8dfc8;
+    
+    /* Variables tipográficas */
+    --font-titulos: 'Playfair Display', serif;
+    --font-subtitulos: 'Cormorant Garamond', serif;
+    --font-texto: 'Montserrat', sans-serif;
+    --escala-texto: 1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font-texto);
+    margin: 0;
+    background: linear-gradient(135deg, #f5f1e8 0%, #ede4d0 100%);
+    color: var(--gris-texto);
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, var(--azul-oscuro) 0%, var(--azul-medio) 100%);
+    color: white;
+    padding: 1.2rem 1.5rem;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1rem;
+    border-bottom: 3px solid var(--dorado);
+    box-shadow: 0 4px 20px rgba(11,31,58,.25);
+  }
+  .marca-header { display: flex; flex-direction: column; gap: .15rem; }
+  .marca-header h1 { margin: 0; font-family: var(--font-titulos); font-size: 1.3rem; font-weight: 600; }
+  .marca-header .subtitulo { font-family: var(--font-subtitulos); font-style: italic; font-size: .9rem; color: var(--dorado-claro); }
+  nav button {
+    background: transparent; color: rgba(255,255,255,.75);
+    border: 1px solid rgba(255,255,255,.3);
+    padding: .45rem .9rem; border-radius: 2px; cursor: pointer;
+    margin-left: .3rem; font-size: .75rem; letter-spacing: 1px; text-transform: uppercase;
+  }
+  nav button:hover { border-color: var(--dorado); color: white; }
+  nav button.activo { background: var(--dorado); color: var(--azul-oscuro); border-color: var(--dorado); font-weight: 600; }
+  main { max-width: 980px; margin: 1.5rem auto; padding: 0 1rem; }
+  .card {
+    background: white; border-radius: 4px; padding: 1.5rem;
+    box-shadow: 0 4px 24px rgba(11,31,58,.08);
+    margin-bottom: 1rem; border-top: 3px solid var(--dorado);
+  }
+  h2 { margin: 0 0 1rem; font-family: var(--font-titulos); color: var(--azul-oscuro); font-size: 1.1rem; font-weight: 600; padding-bottom: .4rem; border-bottom: 1px solid var(--borde); }
+  .fila { display: flex; gap: .5rem; margin-bottom: .7rem; flex-wrap: wrap; }
+  .fila > * { flex: 1; min-width: 120px; }
+  label { display: block; font-size: .65rem; font-weight: 600; margin-bottom: .25rem; color: var(--azul-medio); letter-spacing: 1px; text-transform: uppercase; }
+  input, textarea, select {
+    width: 100%; padding: .5rem .7rem;
+    border: 1px solid var(--borde); border-radius: 3px;
+    font: inherit; font-size: .85rem; background: #fdfcf9; color: var(--gris-texto);
+  }
+  input[type="color"] { padding: 0; height: 34px; cursor: pointer; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--dorado); background: white; }
+  button { padding: .6rem 1.2rem; border: none; border-radius: 3px; cursor: pointer; font: inherit; font-size: .8rem; letter-spacing: .8px; text-transform: uppercase; }
+  .btn-primary { background: var(--azul-oscuro); color: white; }
+  .btn-primary:hover { opacity: .9; }
+  .btn-dorado { background: var(--dorado); color: var(--azul-oscuro); font-weight: 600; }
+  .btn-dorado:hover { opacity: .9; }
+  .btn-secondary { background: transparent; color: var(--azul-medio); border: 1px solid var(--borde); }
+  .btn-secondary:hover { border-color: var(--dorado); background: var(--crema); }
+  .btn-danger { background: #8b1a1a; color: white; }
+  .btn-sm { padding: .35rem .7rem; font-size: .7rem; }
+  .btn-imprimir { background: var(--azul-oscuro); color: var(--dorado-claro); border: 1px solid var(--dorado); }
+  .btn-imprimir:hover { opacity: .9; }
+  .btn-flotante-imprimir {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+    background: var(--dorado);
+    color: var(--azul-oscuro); border: 2px solid var(--azul-oscuro);
+    padding: .8rem 1.2rem; border-radius: 50px;
+    font-size: .8rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; display: flex; align-items: center; gap: .4rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,.2);
+    transition: all .25s;
+  }
+  .btn-flotante-imprimir:hover { transform: translateY(-3px); }
+  #items .fila { align-items: end; }
+  #items .fila input.desc { flex: 3; }
+  #items .fila input.cant { flex: 1; max-width: 80px; }
+  #items .fila input.precio { flex: 1; max-width: 120px; }
+  .acciones { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1rem; }
+  #totales { margin-top: 1.5rem; padding: 1.2rem; background: var(--crema); border-radius: 3px; border-left: 3px solid var(--dorado); }
+  #totales > div { display: flex; justify-content: space-between; padding: .4rem 0; align-items: center; font-family: var(--font-texto); font-size: calc(1rem * var(--escala-texto)); }
+  #totales .total-final { font-family: var(--font-titulos); font-size: calc(1.4rem * var(--escala-texto)); font-weight: 700; color: var(--azul-oscuro); border-top: 2px solid var(--dorado); padding-top: .8rem; margin-top: .5rem; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: .6rem .5rem; text-align: left; border-bottom: 1px solid var(--borde); font-size: calc(.85rem * var(--escala-texto)); }
+  th { background: var(--azul-oscuro); color: var(--dorado-claro); font-weight: 500; font-size: calc(.7rem * var(--escala-texto)); letter-spacing: 1.1px; text-transform: uppercase; }
+  .vacio { text-align: center; color: var(--gris-suave); padding: 2rem; font-style: italic; font-size: .9rem; }
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 1.5rem;
+    background: var(--azul-oscuro); color: var(--dorado-claro);
+    padding: .8rem 1.4rem; border-radius: 3px; border-left: 3px solid var(--dorado);
+    opacity: 0; transform: translateY(20px); transition: all .3s; pointer-events: none; z-index: 10000; font-size: .85rem;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .oculto { display: none !important; }
+
+  /* Panel de personalización de colores */
+  .panel-colores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: .8rem;
+    margin-top: 1rem;
+  }
+  .color-picker-box {
+    background: #fdfcf9;
+    padding: .6rem;
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .color-picker-box label { margin-bottom: .3rem; text-align: center; }
+  .color-picker-box input[type="color"] { border: none; background: none; width: 100%; height: 40px; cursor: pointer; }
+
+  /* ======== DISEÑO DEL PRESUPUESTO ======== */
+  #previewPresupuesto { background: white; padding: 2rem; border-radius: 4px; position: relative; overflow: hidden; color: var(--gris-texto); }
+  #previewPresupuesto::before { content: ''; position: absolute; inset: 10px; border: 1px solid var(--dorado); pointer-events: none; }
+  #previewPresupuesto::after { content: ''; position: absolute; inset: 15px; border: 1px solid var(--dorado); opacity: 0.3; pointer-events: none; }
+  #previewPresupuesto .contenido-pres { position: relative; z-index: 1; padding: .5rem; }
+  
+  #previewPresupuesto .cabecera { text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--dorado); position: relative; }
+  #previewPresupuesto .cabecera::after { content: '✦'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: white; color: var(--dorado); padding: 0 .8rem; font-size: .9rem; }
+  #previewPresupuesto .cabecera h3 { margin: 0; font-family: var(--font-titulos); color: var(--azul-oscuro); font-size: calc(1.4rem * var(--escala-texto)); font-weight: 600; letter-spacing: 1.5px; }
+  #previewPresupuesto .cabecera .rol { font-family: var(--font-subtitulos); font-style: italic; color: var(--dorado); font-size: calc(1rem * var(--escala-texto)); margin: .2rem 0; }
+  #previewPresupuesto .cabecera .mat { font-size: calc(.7rem * var(--escala-texto)); color: var(--gris-suave); letter-spacing: 1.2px; text-transform: uppercase; margin-top: .3rem; }
+  #previewPresupuesto .cabecera .empresa-info { margin-top: .8rem; font-size: calc(.75rem * var(--escala-texto)); color: var(--gris-suave); white-space: pre-line; }
+  
+  #previewPresupuesto .titulo-doc { text-align: center; font-family: var(--font-titulos); font-size: calc(1rem * var(--escala-texto)); color: var(--azul-medio); letter-spacing: 4px; text-transform: uppercase; margin: 1.2rem 0 1rem; font-weight: 500; }
+  
+  #previewPresupuesto .meta-pres { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .8rem; margin-bottom: 1.2rem; padding: .8rem 1rem; background: var(--crema); border-left: 3px solid var(--dorado); font-size: calc(.8rem * var(--escala-texto)); }
+  #previewPresupuesto .meta-pres div strong { display: block; font-size: calc(.65rem * var(--escala-texto)); letter-spacing: 1px; text-transform: uppercase; color: var(--azul-medio); margin-bottom: .1rem; }
+  
+  #previewPresupuesto .seccion-titulo { font-family: var(--font-titulos); font-size: calc(.9rem * var(--escala-texto)); color: var(--azul-oscuro); letter-spacing: 1.5px; text-transform: uppercase; margin: 1.2rem 0 .5rem; padding-bottom: .3rem; border-bottom: 1px solid var(--borde); }
+  
+  #previewPresupuesto .diagnostico-box { background: var(--crema); padding: 1rem 1.2rem; border-left: 3px solid var(--dorado); font-family: var(--font-texto); font-size: calc(.95rem * var(--escala-texto)); line-height: 1.5; white-space: pre-line; }
+  
+  #previewPresupuesto .cliente-box { margin-bottom: 1rem; }
+  #previewPresupuesto .cliente-box .label { font-size: calc(.65rem * var(--escala-texto)); letter-spacing: 1px; text-transform: uppercase; color: var(--azul-medio); margin-bottom: .1rem; }
+  #previewPresupuesto .cliente-box .nombre { font-family: var(--font-titulos); font-size: calc(1.1rem * var(--escala-texto)); color: var(--azul-oscuro); }
+  #previewPresupuesto .cliente-box .contacto { font-size: calc(.8rem * var(--escala-texto)); color: var(--gris-suave); margin-top: .1rem; }
+  
+  #previewPresupuesto table th { background: var(--azul-oscuro); color: var(--dorado-claro); font-size: calc(.65rem * var(--escala-texto)); letter-spacing: 1px; padding: .6rem .5rem; }
+  #previewPresupuesto table td { padding: .6rem .5rem; font-size: calc(.85rem * var(--escala-texto)); border-bottom: 1px solid var(--borde); }
+  
+  #previewPresupuesto .totales-pres { text-align: right; margin-top: 1rem; padding-top: .8rem; }
+  #previewPresupuesto .totales-pres div { padding: .3rem 0; font-family: var(--font-texto); font-size: calc(1rem * var(--escala-texto)); }
+  #previewPresupuesto .totales-pres .final { font-family: var(--font-titulos); font-size: calc(1.3rem * var(--escala-texto)); font-weight: 700; color: var(--azul-oscuro); border-top: 2px solid var(--dorado); padding-top: .6rem; margin-top: .5rem; }
+  
+  #previewPresupuesto .notas { margin-top: 1.5rem; padding: 1rem 1.2rem; background: var(--crema); border-top: 1px solid var(--borde); font-size: calc(.8rem * var(--escala-texto)); white-space: pre-line; font-family: var(--font-texto); }
+  #previewPresupuesto .notas strong { font-family: var(--font-texto); font-size: calc(.65rem * var(--escala-texto)); letter-spacing: 1px; text-transform: uppercase; color: var(--azul-medio); display: block; margin-bottom: .3rem; }
+  
+  #previewPresupuesto .firma { margin-top: 2rem; text-align: center; font-family: var(--font-subtitulos); color: var(--gris-suave); padding-top: 1rem; border-top: 1px solid var(--borde); }
+  #previewPresupuesto .firma .linea { width: 200px; margin: 1.5rem auto .3rem; border-top: 1px solid var(--azul-medio); }
+  #previewPresupuesto .firma .nombre-firma { font-family: var(--font-titulos); font-style: normal; color: var(--azul-oscuro); font-size: calc(.9rem * var(--escala-texto)); margin-top: .2rem; }
+  #previewPresupuesto .firma .mat-firma { font-size: calc(.65rem * var(--escala-texto)); letter-spacing: 1px; text-transform: uppercase; color: var(--gris-suave); margin-top: .1rem; }
+
+  /* ==========================================================================
+     CONFIGURACIÓN DE IMPRESIÓN
+     ========================================================================== */
+  @media print {
+    header, nav, .acciones, #vistaEditor, #vistaHistorial, #vistaConfig,
+    .btn-flotante-imprimir, .toast { display: none !important; }
+    
+    html, body { 
+      background: white !important; 
+      margin: 0 !important; 
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    
+    main { margin: 0 !important; max-width: 100% !important; width: 100% !important; padding: 0 !important; }
+    #vistaPreview { display: block !important; }
+    .card { box-shadow: none !important; padding: 0 !important; border: none !important; margin: 0 !important; background: transparent !important; }
+    
+    #previewPresupuesto { padding: 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; width: 100% !important; margin: 0 auto !important; }
+    #previewPresupuesto::before { inset: 4mm !important; }
+    #previewPresupuesto::after { inset: 6mm !important; }
+    #previewPresupuesto .contenido-pres { padding: 8mm 6mm !important; }
+
+    table th { background-color: var(--azul-oscuro) !important; color: var(--dorado-claro) !important; }
+    .meta-pres, .diagnostico-box, .notas, #totales { background-color: var(--crema) !important; }
+
+    tr, .diagnostico-box, .notas, .firma, .totales-pres { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .cabecera, .titulo-doc, .meta-pres, .cliente-box { page-break-after: avoid !important; break-after: avoid !important; }
+
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+  
+  @media (max-width: 600px) {
+    .btn-flotante-imprimir span { display: none; }
+    .btn-flotante-imprimir { padding: .8rem; border-radius: 50%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca-header">
+    <h1 id="headerNombre">Cargando...</h1>
+    <span class="subtitulo" id="headerSubtitulo">Cargando...</span>
+  </div>
+  <nav>
+    <button id="navEditor" class="activo" onclick="cambiarVista('editor')">Editor</button>
+    <button id="navHistorial" onclick="cambiarVista('historial')">Historial</button>
+    <button id="navConfig" onclick="cambiarVista('config')">Configuración</button>
+  </nav>
+</header>
+
+<main>
+
+  <section id="vistaEditor">
+    <div class="card">
+      <h2>Nuevo Presupuesto</h2>
+      <div class="fila">
+        <div><label>Cliente / Paciente</label><input id="cliente" placeholder="Nombre completo"></div>
+        <div><label>Fecha</label><input id="fecha" type="date"></div>
+        <div><label>Nº presupuesto</label><input id="numero" readonly style="background:#f5f1e8; font-weight:bold; color:var(--azul-medio);"></div>
+      </div>
+      <div class="fila">
+        <div><label>Contacto (opcional)</label><input id="contacto" placeholder="teléfono / email"></div>
+        <div><label>Validez (días)</label><input id="validez" type="number" value="30" min="1"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Diagnóstico / Evaluación</h2>
+      <div>
+        <label>Detalle clínico o justificación del servicio</label>
+        <textarea id="diagnostico" rows="3" placeholder="Describa el diagnóstico, hallazgos o procedimiento recomendado..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Procedimientos / Ítems</h2>
+      <div id="items"></div>
+      <div class="acciones">
+        <button class="btn-primary btn-sm" onclick="agregarItem()">+ Agregar ítem</button>
+        <button class="btn-secondary btn-sm" onclick="cargarPlantilla()">Cargar ítems frecuentes</button>
+      </div>
+      <div id="totales">
+        <div><span>Subtotal</span><strong id="subtotal">Bs 0.00</strong></div>
+        <div>
+          <span>Descuento
+            <input type="number" id="descPct" value="0" min="0" max="100" style="width:60px;display:inline-block;padding:.2rem .3rem;margin-left:.4rem;">
+            %
+          </span>
+          <strong id="descuento">-Bs 0.00</strong>
+        </div>
+        <div class="total-final"><span>TOTAL</span><span id="total">Bs 0.00</span></div>
+      </div>
+      <div style="margin-top:1rem;">
+        <label>Notas / Condiciones</label>
+        <textarea id="notas" rows="2" placeholder="Forma de pago, plazos, condiciones..."></textarea>
+      </div>
+    </div>
+
+    <div class="acciones">
+      <button class="btn-dorado" onclick="guardarYPrevisualizar()">Guardar y previsualizar</button>
+      <button class="btn-imprimir" onclick="imprimirDirecto()">Imprimir directamente</button>
+      <button class="btn-secondary" onclick="limpiarFormulario()">Limpiar formulario</button>
+    </div>
+  </section>
+
+  <section id="vistaPreview" class="oculto">
+    <div class="card">
+      <div id="previewPresupuesto"></div>
+      <div class="acciones" style="margin-top:1rem;">
+        <button class="btn-dorado" onclick="window.print()">Imprimir / Guardar PDF</button>
+        <button class="btn-secondary" onclick="cambiarVista('editor')">← Volver al editor</button>
+        <button class="btn-secondary" onclick="cambiarVista('historial')">Ver historial</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="vistaHistorial" class="oculto">
+    <div class="card">
+      <h2>Historial de presupuestos</h2>
+      <div id="listaHistorial"></div>
+    </div>
+  </section>
+
+  <section id="vistaConfig" class="oculto">
+    <div class="card">
+      <h2>Datos del Profesional / Consultorio</h2>
+      <div class="fila">
+        <div><label>Título / Nombre (Ej. Dr. Franklin Cepeda M)</label><input id="empNombre" placeholder="Ej. Dr. Franklin Cepeda M"></div>
+        <div><label>Subtítulo / Especialidad (Ej. Cirujano Plástico)</label><input id="empRol" placeholder="Ej. Cirujano Plástico"></div>
+      </div>
+      <div class="fila">
+        <div><label>Matrícula / Registro Profesional</label><input id="empMat" placeholder="Ej. Mat. Prof. C 4454"></div>
+        <div><label>NIF / Cédula (opcional)</label><input id="empNif" placeholder=""></div>
+      </div>
+      <div>
+        <label>Dirección y datos de contacto (una línea por dato)</label>
+        <textarea id="empInfo" rows="3" placeholder="Av. Principal 123, Consultorio 401&#10;Tel: +591 000 00000&#10;contacto@correo.com"></textarea>
+      </div>
+      
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--borde);">
+        <h2 style="margin-top:0; font-size: 1rem; border-bottom: none;">Configuración del Documento e Impresión</h2>
+        <div class="fila">
+          <div>
+            <label>Nombre del documento (Título central)</label>
+            <input id="empDocTitulo" placeholder="Presupuesto" value="Presupuesto">
+          </div>
+          <div>
+            <label>Tamaño de hoja</label>
+            <select id="empTamanoHoja">
+              <option value="legal">Oficio / Legal (216 x 356 mm)</option>
+              <option value="A4">A4 (210 x 297 mm)</option>
+              <option value="letter">Carta (216 x 279 mm)</option>
+              <option value="A5">A5 (148 x 210 mm)</option>
+            </select>
+          </div>
+          <div>
+            <label>Orientación</label>
+            <select id="empOrientacion">
+              <option value="portrait">Vertical</option>
+              <option value="landscape">Horizontal</option>
+            </select>
+          </div>
+          <div>
+            <label>Margen (mm)</label>
+            <input id="empMargen" type="number" min="0" max="50" value="10">
+          </div>
+        </div>
+
+        <div class="fila" style="margin-top: 1rem; background: #fdfcf9; padding: .8rem; border: 1px solid var(--borde); border-radius: 4px;">
+          <div>
+            <label>Prefijo de numeración</label>
+            <input id="empPrefijo" placeholder="PRES" value="PRES">
+          </div>
+          <div>
+            <label>Siguiente número (Correlativo)</label>
+            <input id="empSiguiente" type="number" min="1" value="1" style="font-weight: bold; color: var(--azul-oscuro);">
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="btn-secondary btn-sm" type="button" onclick="recalcularSiguiente()" title="Busca el número más alto en el historial y suma 1">🔄 Re-calcular</button>
+          </div>
+        </div>
+        <p style="font-size: .7rem; color: var(--gris-suave); margin-top: .3rem;">El botón "Re-calcular" busca el presupuesto más alto guardado y le suma 1 para evitar duplicados.</p>
+
+        <div class="fila" style="margin-top: 1rem;">
+          <div>
+            <label>Moneda (símbolo)</label>
+            <input id="empMoneda" value="Bs " maxlength="4">
+          </div>
+        </div>
+      </div>
+      
+      <div class="acciones">
+        <button class="btn-dorado" onclick="guardarConfig()">Guardar configuración</button>
+      </div>
+    </div>
+
+    <!-- NUEVO PANEL DE PERSONALIZACIÓN VISUAL -->
+    <div class="card">
+      <h2>Personalización Visual (Colores y Letras)</h2>
+      
+      <div class="panel-colores">
+        <div class="color-picker-box">
+          <label>Color Principal (Títulos)</label>
+          <input type="color" id="colorPrincipal" value="#0b1f3a">
+        </div>
+        <div class="color-picker-box">
+          <label>Color de Acento (Detalles)</label>
+          <input type="color" id="colorAcento" value="#c9a24a">
+        </div>
+        <div class="color-picker-box">
+          <label>Color de Fondo (Cajas)</label>
+          <input type="color" id="colorFondo" value="#faf7f0">
+        </div>
+        <div class="color-picker-box">
+          <label>Color del Texto</label>
+          <input type="color" id="colorTexto" value="#3a3a3a">
+        </div>
+      </div>
+
+      <div class="fila" style="margin-top: 1.5rem;">
+        <div>
+          <label>Estilo de Letra (Tipografía)</label>
+          <select id="empTipografia">
+            <option value="elegante">Elegante / Serif (Playfair + Montserrat)</option>
+            <option value="clasica">Clásica (Lora + Montserrat)</option>
+            <option value="moderna">Moderna / Minimalista (Inter)</option>
+            <option value="sans">Sans Serif (Todo Montserrat)</option>
+          </select>
+        </div>
+        <div>
+          <label>Tamaño de Letra General (<span id="labelEscala">100</span>%)</label>
+          <input type="range" id="empEscalaTexto" min="80" max="120" step="5" value="100" style="padding: 0;" oninput="document.getElementById('labelEscala').textContent = this.value;">
+        </div>
+      </div>
+
+      <div class="acciones" style="margin-top: 1rem;">
+        <button class="btn-dorado" onclick="guardarEstilos()">Aplicar y Guardar Estilos</button>
+        <button class="btn-secondary" onclick="resetearEstilos()">Restablecer por Defecto</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ítems Frecuentes (Plantilla)</h2>
+      <p style="color:var(--gris-suave);font-size:.85rem;margin-top:0;">Aparecerán al pulsar "Cargar ítems frecuentes" en el editor.</p>
+      <div id="listaPlantilla"></div>
+      <button class="btn-primary btn-sm" onclick="agregarPlantilla()" style="margin-top:.5rem;">+ Añadir ítem frecuente</button>
+    </div>
+  </section>
+
+</main>
+
+<button id="btnFlotanteImprimir" class="btn-flotante-imprimir" type="button" title="Imprimir presupuesto">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+    <rect x="6" y="14" width="12" height="8"></rect>
+  </svg>
+  <span>Imprimir</span>
+</button>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  var STORAGE = {
+    config: 'presupuesto_config_v11',
+    presupuestos: 'presupuesto_lista_v11',
+    plantilla: 'presupuesto_plantilla_v11'
+  };
+
+  // Configuración por defecto con estilos
+  var config = JSON.parse(localStorage.getItem(STORAGE.config) || 'null') || {
+    nombre: 'Dr. Franklin Cepeda M', 
+    rol: 'Cirujano Plástico',
+    mat: 'Mat. Prof. C 4454', 
+    nif: '', 
+    info: 'Av. Principal 123, Consultorio 401\nTel: +591 000 00000',
+    docTitulo: 'Presupuesto',
+    prefijo: 'PRES', 
+    siguiente: 1, 
+    moneda: 'Bs ', 
+    margen: 10, 
+    tamanoHoja: 'legal', 
+    orientacion: 'portrait',
+    // Nuevos estilos
+    colorPrincipal: '#0b1f3a',
+    colorAcento: '#c9a24a',
+    colorFondo: '#faf7f0',
+    colorTexto: '#3a3a3a',
+    tipografia: 'elegante',
+    escalaTexto: 100
+  };
+  
+  // Asegurar valores por defecto
+  if (config.margen === undefined) config.margen = 10;
+  if (!config.tamanoHoja) config.tamanoHoja = 'legal';
+  if (!config.orientacion) config.orientacion = 'portrait';
+  if (!config.siguiente) config.siguiente = 1;
+  if (!config.docTitulo) config.docTitulo = 'Presupuesto';
+  if (!config.colorPrincipal) config.colorPrincipal = '#0b1f3a';
+  if (!config.colorAcento) config.colorAcento = '#c9a24a';
+  if (!config.colorFondo) config.colorFondo = '#faf7f0';
+  if (!config.colorTexto) config.colorTexto = '#3a3a3a';
+  if (!config.tipografia) config.tipografia = 'elegante';
+  if (!config.escalaTexto) config.escalaTexto = 100;
+
+  var plantilla = JSON.parse(localStorage.getItem(STORAGE.plantilla) || '[]');
+  var presupuestos = JSON.parse(localStorage.getItem(STORAGE.presupuestos) || '[]');
+  var presupuestoActual = null;
+  var fechaActualFormulario = '';
+
+  function $(id) { return document.getElementById(id); }
+  function toast(msg) {
+    var t = $('toast'); if (!t) return;
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2400);
+  }
+
+  function fmt(n) {
+    return config.moneda + Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fechaHoy() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function actualizarFechaAuto() {
+    if (!$('vistaEditor').classList.contains('oculto') && !presupuestoActual) {
+      var hoy = fechaHoy();
+      if (fechaActualFormulario !== hoy) {
+        $('fecha').value = hoy;
+        fechaActualFormulario = hoy;
+      }
+    }
+  }
+
+  function generarNumero() {
+    return config.prefijo + '-' + new Date().getFullYear() + '-' + String(config.siguiente).padStart(3, '0');
+  }
+
+  function recalcularSiguiente() {
+    var maxNum = 0;
+    presupuestos.forEach(function(p) {
+      var match = p.numero.match(/(\d+)$/);
+      if (match) {
+        var num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    config.siguiente = maxNum + 1;
+    localStorage.setItem(STORAGE.config, JSON.stringify(config));
+    if ($('empSiguiente')) $('empSiguiente').value = config.siguiente;
+    if ($('numero') && !presupuestoActual) $('numero').value = generarNumero();
+    toast('Numeración re-calculada a: ' + config.siguiente);
+  }
+
+  function actualizarConfigImpresion() {
+    var styleId = 'dynamic-print-config';
+    var styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    var m = config.margen || 10;
+    var size = config.tamanoHoja || 'legal';
+    var ori = config.orientacion || 'portrait';
+    styleEl.innerHTML = '@media print { @page { margin: ' + m + 'mm !important; size: ' + size + ' ' + ori + '; } }';
+  }
+
+  function aplicarEstilosVisuales() {
+    var root = document.documentElement;
+    
+    // Aplicar colores
+    root.style.setProperty('--azul-oscuro', config.colorPrincipal);
+    root.style.setProperty('--azul-medio', config.colorPrincipal); 
+    root.style.setProperty('--dorado', config.colorAcento);
+    root.style.setProperty('--dorado-claro', config.colorAcento);
+    root.style.setProperty('--crema', config.colorFondo);
+    root.style.setProperty('--gris-texto', config.colorTexto);
+    
+    // Aplicar tipografía
+    var fontTitulos = "'Playfair Display', serif";
+    var fontSubtitulos = "'Cormorant Garamond', serif";
+    var fontTexto = "'Montserrat', sans-serif";
+
+    if (config.tipografia === 'clasica') {
+      fontTitulos = "'Lora', serif";
+      fontSubtitulos = "'Lora', serif";
+      fontTexto = "'Montserrat', sans-serif";
+    } else if (config.tipografia === 'moderna') {
+      fontTitulos = "'Inter', sans-serif";
+      fontSubtitulos = "'Inter', sans-serif";
+      fontTexto = "'Inter', sans-serif";
+    } else if (config.tipografia === 'sans') {
+      fontTitulos = "'Montserrat', sans-serif";
+      fontSubtitulos = "'Montserrat', sans-serif";
+      fontTexto = "'Montserrat', sans-serif";
+    }
+
+    root.style.setProperty('--font-titulos', fontTitulos);
+    root.style.setProperty('--font-subtitulos', fontSubtitulos);
+    root.style.setProperty('--font-texto', fontTexto);
+
+    // Aplicar escala
+    root.style.setProperty('--escala-texto', (config.escalaTexto / 100).toString());
+  }
+
+  function actualizarEncabezado() {
+    if ($('headerNombre')) $('headerNombre').textContent = config.nombre || 'Nombre del Profesional';
+    if ($('headerSubtitulo')) {
+      var sub = config.rol || 'Especialidad';
+      if (config.mat) sub += ' · ' + config.mat;
+      $('headerSubtitulo').textContent = sub;
+    }
+    document.title = (config.nombre || 'Profesional') + ' — ' + (config.docTitulo || 'Presupuesto');
+  }
+
+  window.cambiarVista = function(vista) {
+    ['editor', 'historial', 'config', 'preview'].forEach(function(v) {
+      var el = $('vista' + v.charAt(0).toUpperCase() + v.slice(1));
+      if (el) el.classList.add('oculto');
+      var nav = $('nav' + v.charAt(0).toUpperCase() + v.slice(1));
+      if (nav) nav.classList.remove('activo');
+    });
+    var vistaEl = $('vista' + vista.charAt(0).toUpperCase() + vista.slice(1));
+    if (vistaEl) vistaEl.classList.remove('oculto');
+    var navEl = $('nav' + vista.charAt(0).toUpperCase() + vista.slice(1));
+    if (navEl) navEl.classList.add('activo');
+    
+    if (vista === 'editor' && !presupuestoActual) actualizarFechaAuto();
+    if (vista === 'historial') renderHistorial();
+    if (vista === 'config') renderConfig();
+  };
+
+  window.agregarItem = function(datos) {
+    datos = datos || {};
+    var div = document.createElement('div');
+    div.className = 'fila';
+    div.innerHTML =
+      '<input class="desc" placeholder="Descripción del ítem" value="' + (datos.desc || '').replace(/"/g, '&quot;') + '">' +
+      '<input class="cant" type="number" placeholder="Cant." value="' + (datos.cant || 1) + '" min="0" step="any">' +
+      '<input class="precio" type="number" placeholder="Precio" value="' + (datos.precio || 0) + '" min="0" step="any">' +
+      '<button class="btn-danger btn-sm" type="button" onclick="this.parentElement.remove(); window.calcular();">✕</button>';
+    div.querySelectorAll('input').forEach(function(i) { i.addEventListener('input', window.calcular); });
+    $('items').appendChild(div);
+    window.calcular();
+  };
+
+  window.calcular = function() {
+    var subtotal = 0;
+    document.querySelectorAll('#items .fila').forEach(function(fila) {
+      subtotal += (parseFloat(fila.querySelector('.cant').value) || 0) * (parseFloat(fila.querySelector('.precio').value) || 0);
+    });
+    var descPct = parseFloat($('descPct').value) || 0;
+    var descuento = subtotal * (descPct / 100);
+    var total = subtotal - descuento;
+    $('subtotal').textContent = fmt(subtotal);
+    $('descuento').textContent = '-' + fmt(descuento);
+    $('total').textContent = fmt(total);
+    return { subtotal: subtotal, descuento: descuento, total: total, descPct: descPct };
+  };
+
+  window.limpiarFormulario = function() {
+    if (!confirm('¿Limpiar el formulario actual?')) return;
+    $('items').innerHTML = '';
+    $('cliente').value = ''; $('contacto').value = ''; $('notas').value = ''; $('diagnostico').value = '';
+    $('descPct').value = 0;
+    presupuestoActual = null;
+    fechaActualFormulario = ''; 
+    actualizarFechaAuto();
+    $('numero').value = generarNumero();
+    window.agregarItem(); 
+  };
+
+  window.cargarPlantilla = function() {
+    if (plantilla.length === 0) return toast('No hay ítems guardados');
+    plantilla.forEach(function(p) { window.agregarItem(p); });
+    toast(plantilla.length + ' ítem(s) cargado(s)');
+  };
+
+  function recogerDatos() {
+    var items = [];
+    document.querySelectorAll('#items .fila').forEach(function(fila) {
+      var desc = fila.querySelector('.desc').value.trim();
+      var cant = parseFloat(fila.querySelector('.cant').value) || 0;
+      var precio = parseFloat(fila.querySelector('.precio').value) || 0;
+      if (desc || cant || precio) items.push({ desc: desc, cant: cant, precio: precio });
+    });
+    var calc = window.calcular();
+    return {
+      id: presupuestoActual ? presupuestoActual.id : Date.now().toString(),
+      numero: $('numero').value, 
+      cliente: $('cliente').value.trim(), contacto: $('contacto').value.trim(),
+      fecha: $('fecha').value, validez: parseInt($('validez').value) || 30,
+      diagnostico: $('diagnostico').value.trim(), notas: $('notas').value.trim(), items: items,
+      descPct: calc.descPct, totales: { subtotal: calc.subtotal, descuento: calc.descuento, total: calc.total },
+      estado: presupuestoActual ? presupuestoActual.estado : 'borrador'
+    };
+  }
+
+  function guardarPresupuesto(p) {
+    var idx = -1;
+    for (var i = 0; i < presupuestos.length; i++) if (presupuestos[i].id === p.id) { idx = i; break; }
+    
+    if (idx >= 0) {
+      presupuestos[idx] = p;
+    } else {
+      presupuestos.unshift(p); 
+      config.siguiente++; 
+      localStorage.setItem(STORAGE.config, JSON.stringify(config)); 
+    }
+    localStorage.setItem(STORAGE.presupuestos, JSON.stringify(presupuestos));
+    presupuestoActual = p;
+  }
+
+  window.guardarYPrevisualizar = function() {
+    var p = recogerDatos();
+    if (!p.cliente) return alert('Introduce el nombre del cliente o paciente');
+    if (p.items.length === 0) return alert('Añade al menos un ítem');
+    guardarPresupuesto(p); renderPreview(p); window.cambiarVista('preview'); toast('Presupuesto guardado');
+  };
+
+  window.imprimirDirecto = function() {
+    try {
+      var enEditor = !$('vistaEditor').classList.contains('oculto');
+      if (enEditor) {
+        var p = recogerDatos();
+        if (!p.cliente || p.items.length === 0) {
+          if (presupuestoActual) { renderPreview(presupuestoActual); window.cambiarVista('preview'); }
+          else return alert('Completa al menos el cliente y un ítem antes de imprimir.');
+        } else { guardarPresupuesto(p); renderPreview(p); window.cambiarVista('preview'); }
+      } else if (!$('vistaHistorial').classList.contains('oculto')) {
+        if (presupuestoActual) { renderPreview(presupuestoActual); window.cambiarVista('preview'); }
+        else return alert('Abre un presupuesto del historial para imprimirlo.');
+      } else if ($('vistaPreview').classList.contains('oculto')) {
+        return alert('No hay ningún presupuesto para imprimir.');
+      }
+      window.print();
+    } catch (err) {
+      console.error('[Imprimir] ERROR:', err);
+      alert('Error al imprimir: ' + err.message + '\n\nPuedes usar Ctrl+P como alternativa.');
+    }
+  };
+
+  function renderPreview(p) {
+    var fechaVenc = new Date(p.fecha); fechaVenc.setDate(fechaVenc.getDate() + p.validez);
+    var fechaVencStr = fechaVenc.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    var fechaStr = new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    var filas = p.items.map(function(it) {
+      return '<tr><td>' + (it.desc || '—') + '</td><td style="text-align:center;">' + it.cant + '</td>' +
+             '<td style="text-align:right;">' + fmt(it.precio) + '</td><td style="text-align:right;">' + fmt(it.cant * it.precio) + '</td></tr>';
+    }).join('');
+
+    var diagnosticoHTML = p.diagnostico ? '<div class="seccion-titulo">Diagnóstico / Evaluación</div><div class="diagnostico-box">' + p.diagnostico + '</div>' : '';
+    var notasHTML = p.notas ? '<div class="notas"><strong>Notas y condiciones</strong>' + p.notas + '</div>' : '';
+    var descuentoHTML = p.totales.descuento > 0 ? '<div>Descuento (' + p.descPct + '%): <strong>-' + fmt(p.totales.descuento) + '</strong></div>' : '';
+
+    $('previewPresupuesto').innerHTML =
+      '<div class="contenido-pres">' +
+        '<div class="cabecera">' +
+          '<h3>' + (config.nombre || 'Nombre del Profesional') + '</h3>' +
+          '<div class="rol">' + (config.rol || 'Especialidad') + '</div>' +
+          '<div class="mat">' + (config.mat || '') + (config.nif ? ' · ' + config.nif : '') + '</div>' +
+          (config.info ? '<div class="empresa-info">' + config.info.replace(/\n/g, '<br>') + '</div>' : '') +
+        '</div>' +
+        '<div class="titulo-doc">' + (config.docTitulo || 'Presupuesto') + '</div>' +
+        '<div class="meta-pres">' +
+          '<div><strong>Nº</strong>' + p.numero + '</div>' +
+          '<div><strong>Fecha</strong>' + fechaStr + '</div>' +
+          '<div><strong>Válido hasta</strong>' + fechaVencStr + '</div>' +
+        '</div>' +
+        '<div class="cliente-box"><div class="label">Cliente / Paciente</div><div class="nombre">' + p.cliente + '</div>' +
+          (p.contacto ? '<div class="contacto">' + p.contacto + '</div>' : '') + '</div>' +
+        diagnosticoHTML +
+        '<div class="seccion-titulo">Detalle de Procedimientos / Ítems</div>' +
+        '<table><thead><tr><th>Descripción</th><th style="text-align:center;width:60px;">Cant.</th><th style="text-align:right;width:100px;">Precio</th><th style="text-align:right;width:110px;">Importe</th></tr></thead><tbody>' + filas + '</tbody></table>' +
+        '<div class="totales-pres">' +
+          '<div>Subtotal: <strong>' + fmt(p.totales.subtotal) + '</strong></div>' + descuentoHTML +
+          '<div class="final">TOTAL: ' + fmt(p.totales.total) + '</div>' +
+        '</div>' +
+        notasHTML +
+        '<div class="firma">' +
+          '<div class="linea"></div>' +
+          '<div class="nombre-firma">' + (config.nombre || 'Nombre del Profesional') + '</div>' +
+          '<div class="mat-firma">' + (config.rol || 'Especialidad') + (config.mat ? ' · ' + config.mat : '') + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderHistorial() {
+    var cont = $('listaHistorial');
+    if (presupuestos.length === 0) return cont.innerHTML = '<div class="vacio">Aún no has guardado ningún presupuesto.</div>';
+    var filas = presupuestos.map(function(p) {
+      return '<tr><td style="font-family:monospace;">' + p.numero + '</td><td>' + p.cliente + '</td><td>' + new Date(p.fecha).toLocaleDateString('es-ES') + '</td>' +
+        '<td><strong>' + fmt(p.totales.total) + '</strong></td><td><select onchange="cambiarEstado(\'' + p.id + '\', this.value)" style="font-size:.75rem;padding:.2rem;">' +
+          '<option value="borrador"' + (p.estado==='borrador'?' selected':'') + '>Borrador</option><option value="enviado"' + (p.estado==='enviado'?' selected':'') + '>Enviado</option><option value="aceptado"' + (p.estado==='aceptado'?' selected':'') + '>Aceptado</option></select></td>' +
+        '<td><button class="btn-secondary btn-sm" type="button" onclick="abrirPresupuesto(\'' + p.id + '\')">Ver</button> ' +
+          '<button class="btn-imprimir btn-sm" type="button" onclick="imprimirDesdeHistorial(\'' + p.id + '\')" title="Imprimir">🖨️</button> ' +
+          '<button class="btn-danger btn-sm" type="button" onclick="eliminarPresupuesto(\'' + p.id + '\')">✕</button></td></tr>';
+    }).join('');
+    cont.innerHTML = '<table><thead><tr><th>Número</th><th>Cliente / Paciente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>' + filas + '</tbody></table>';
+  }
+
+  window.abrirPresupuesto = function(id) {
+    var p = null; for (var i = 0; i < presupuestos.length; i++) if (presupuestos[i].id === id) { p = presupuestos[i]; break; }
+    if (!p) return;
+    presupuestoActual = p;
+    $('numero').value = p.numero; $('cliente').value = p.cliente; $('contacto').value = p.contacto || '';
+    $('fecha').value = p.fecha; $('validez').value = p.validez; $('diagnostico').value = p.diagnostico || '';
+    $('notas').value = p.notas; $('descPct').value = p.descPct; $('items').innerHTML = '';
+    p.items.forEach(function(it) { window.agregarItem(it); });
+    window.calcular(); renderPreview(p); window.cambiarVista('preview');
+  };
+
+  window.imprimirDesdeHistorial = function(id) {
+    window.abrirPresupuesto(id);
+    setTimeout(function() { window.print(); }, 100);
+  };
+
+  window.eliminarPresupuesto = function(id) {
+    if (!confirm('¿Eliminar este presupuesto? (El número no se volverá a usar)')) return;
+    presupuestos = presupuestos.filter(function(x) { return x.id !== id; });
+    localStorage.setItem(STORAGE.presupuestos, JSON.stringify(presupuestos)); renderHistorial(); toast('Presupuesto eliminado');
+  };
+
+  window.cambiarEstado = function(id, estado) {
+    for (var i = 0; i < presupuestos.length; i++) if (presupuestos[i].id === id) {
+      presupuestos[i].estado = estado; localStorage.setItem(STORAGE.presupuestos, JSON.stringify(presupuestos)); toast('Estado actualizado'); return;
+    }
+  };
+
+  function renderConfig() {
+    $('empNombre').value = config.nombre; $('empRol').value = config.rol; $('empMat').value = config.mat;
+    $('empNif').value = config.nif; $('empInfo').value = config.info; $('empPrefijo').value = config.prefijo;
+    $('empSiguiente').value = config.siguiente; $('empMoneda').value = config.moneda; 
+    $('empDocTitulo').value = config.docTitulo;
+    $('empMargen').value = config.margen;
+    $('empTamanoHoja').value = config.tamanoHoja;
+    $('empOrientacion').value = config.orientacion;
+    
+    // Cargar panel visual
+    $('colorPrincipal').value = config.colorPrincipal;
+    $('colorAcento').value = config.colorAcento;
+    $('colorFondo').value = config.colorFondo;
+    $('colorTexto').value = config.colorTexto;
+    $('empTipografia').value = config.tipografia;
+    $('empEscalaTexto').value = config.escalaTexto;
+    $('labelEscala').textContent = config.escalaTexto;
+
+    renderPlantilla();
+  }
+
+  window.guardarEstilos = function() {
+    config.colorPrincipal = $('colorPrincipal').value;
+    config.colorAcento = $('colorAcento').value;
+    config.colorFondo = $('colorFondo').value;
+    config.colorTexto = $('colorTexto').value;
+    config.tipografia = $('empTipografia').value;
+    config.escalaTexto = parseInt($('empEscalaTexto').value) || 100;
+
+    localStorage.setItem(STORAGE.config, JSON.stringify(config));
+    aplicarEstilosVisuales();
+    actualizarEncabezado();
+    toast('Estilos aplicados y guardados');
+  };
+
+  window.resetearEstilos = function() {
+    if(!confirm('¿Restablecer los colores y letras por defecto?')) return;
+    $('colorPrincipal').value = '#0b1f3a';
+    $('colorAcento').value = '#c9a24a';
+    $('colorFondo').value = '#faf7f0';
+    $('colorTexto').value = '#3a3a3a';
+    $('empTipografia').value = 'elegante';
+    $('empEscalaTexto').value = 100;
+    $('labelEscala').textContent = '100';
+    window.guardarEstilos();
+  };
+
+  window.guardarConfig = function() {
+    config.nombre = $('empNombre').value.trim() || 'Nombre del Profesional'; 
+    config.rol = $('empRol').value.trim() || 'Especialidad';
+    config.mat = $('empMat').value.trim(); 
+    config.nif = $('empNif').value.trim();
+    config.info = $('empInfo').value.trim(); 
+    config.prefijo = $('empPrefijo').value.trim() || 'PRES';
+    config.siguiente = parseInt($('empSiguiente').value) || 1; 
+    config.moneda = $('empMoneda').value.trim() || 'Bs ';
+    config.docTitulo = $('empDocTitulo').value.trim() || 'Presupuesto';
+    config.margen = parseInt($('empMargen').value) || 10;
+    config.tamanoHoja = $('empTamanoHoja').value;
+    config.orientacion = $('empOrientacion').value;
+    
+    localStorage.setItem(STORAGE.config, JSON.stringify(config)); 
+    actualizarConfigImpresion(); 
+    actualizarEncabezado();
+    toast('Datos de configuración guardados');
+  };
+
+  function renderPlantilla() {
+    var cont = $('listaPlantilla');
+    if (plantilla.length === 0) return cont.innerHTML = '<div class="vacio" style="padding:1rem;">Sin ítems frecuentes aún.</div>';
+    cont.innerHTML = plantilla.map(function(p, i) {
+      return '<div class="fila" style="align-items:center;">' +
+        '<input value="' + (p.desc || '').replace(/"/g, '&quot;') + '" placeholder="Descripción" onchange="actualizarPlantilla(' + i + ', \'desc\', this.value)" style="flex:3;">' +
+        '<input type="number" value="' + p.cant + '" placeholder="Cant." onchange="actualizarPlantilla(' + i + ', \'cant\', this.value)" style="flex:1;max-width:80px;">' +
+        '<input type="number" value="' + p.precio + '" placeholder="Precio" onchange="actualizarPlantilla(' + i + ', \'precio\', this.value)" style="flex:1;max-width:120px;">' +
+        '<button class="btn-danger btn-sm" type="button" onclick="eliminarPlantilla(' + i + ')">✕</button></div>';
+    }).join('');
+  }
+
+  window.actualizarPlantilla = function(i, campo, valor) {
+    if (!plantilla[i]) return;
+    if (campo === 'cant') valor = parseFloat(valor) || 1; if (campo === 'precio') valor = parseFloat(valor) || 0;
+    plantilla[i][campo] = valor; localStorage.setItem(STORAGE.plantilla, JSON.stringify(plantilla));
+  };
+
+  window.agregarPlantilla = function() { plantilla.push({ desc: '', cant: 1, precio: 0 }); localStorage.setItem(STORAGE.plantilla, JSON.stringify(plantilla)); renderPlantilla(); };
+  window.eliminarPlantilla = function(i) { plantilla.splice(i, 1); localStorage.setItem(STORAGE.plantilla, JSON.stringify(plantilla)); renderPlantilla(); };
+
+  function init() {
+    var btn = document.getElementById('btnFlotanteImprimir');
+    if (btn) btn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); window.imprimirDirecto(); });
+    
+    if ($('numero')) $('numero').value = generarNumero();
+    if ($('descPct')) $('descPct').addEventListener('input', window.calcular);
+    
+    actualizarFechaAuto();
+    setInterval(actualizarFechaAuto, 60000);
+
+    actualizarConfigImpresion();
+    aplicarEstilosVisuales();
+    actualizarEncabezado();
+    window.agregarItem();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+</body>
+</html>
